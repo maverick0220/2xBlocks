@@ -1,4 +1,5 @@
 import flet as ft
+import time
 from chessboard import *
 
 def main(page: ft.Page):
@@ -152,17 +153,25 @@ def main(page: ft.Page):
         if e.key in ["W", "w", "ArrowUp", "Arrow Up"]:
             chessboard.printBoard()
             if chessboard.sendBlock():
-                chessboard.printBoard()
-
-                while(True):
-                    didFinishCheck, toMergeBlocks = chessboard.checkChessboard()  # 在checkChessboard里面就已经聚合过后台了
-                    if didFinishCheck == False:
-                        continue
-                    elif len(toMergeBlocks) == 0:
+                time.sleep(0.4)
+                temp_count = 0
+                while(temp_count < 3):
+                    if temp_count > 3:
                         break
+                    chessboard.printBoard()
+                    
+                    checkResult = chessboard.checkChessboard()  # 在checkChessboard里面就已经聚合过后台了
+                    temp_count += 1
+                    time.sleep(0.4)
+                    if checkResult.isValidEvent:
+                        continue
+                    elif len(checkResult.relativeBlockGroups) == 0:
+                        break
+
+                    
                 # -todo: 更新聚合后模型的UI。到这个时候后台该干的事儿都干完了
 
-
+                # chessboard.printBoard()
             update_allView()
 
     # 绑定键盘事件

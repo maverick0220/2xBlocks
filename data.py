@@ -5,7 +5,8 @@ class Data:
         self.rank = rank
 
         self.color = "#B5B5B5"  # default grey
-        self.color = self.getColor()
+        if value > 0:
+            self.color = self.getColor()
 
     def upgradeRank(self):
         ranks = list("abcdfeghijklmnopqrstuvwxyz") + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -32,7 +33,7 @@ class Data:
 
         if self.value == -1:
             return "#B5B5B5"
-
+        print(f"getColor(): {self.value}")
         # 3. 结合哈希结果生成索引（保证连续8个不同，覆盖200个索引）
         num_h = num_hash(self.value) % 200  # 数字哈希映射到0-199
         rank_h = rank_hash(self.rank)
@@ -43,6 +44,14 @@ class Data:
         colors = ['#8B8B00', '#8A2BE2', '#4169E1', '#FFB90F', '#FFA500', '#BA55D3', '#90EE90', '#87CEEB', '#3A5FCD', '#FF4500', '#8B4500', '#EEB422', '#548B54', '#CD5555', '#CDCD00', '#8B1A1A', '#00CD66', '#FF1493', '#528B8B', '#698B69', '#CD3333', '#DB7093', '#473C8B', '#CD8500', '#7CCD7C', '#FF7F50', '#4F94CD', '#009ACD', '#FFC0CB', '#B452CD', '#104E8B', '#CD3700', '#9BCD9B', '#1E90FF', '#FFA07A', '#FF7F00', '#AFEEEE', '#4876FF', '#6A5ACD', '#00EEEE', '#7A378B', '#CD4F39', '#00868B', '#CD96CD', '#8DEEEE', '#FF00FF', '#CD6600', '#B0E0E6', '#C71585', '#EE7600', '#8B3626', '#00FFFF', '#E9967A', '#36648B', '#D02090', '#9370DB', '#8B658B', '#54FF9F', '#2E8B57', '#FF00FF', '#EEB4B4', '#483D8B', '#FF6A6A', '#00FF00', '#ADD8E6', '#8B7500', '#00CDCD', '#EE6363', '#EE0000', '#CD950C', '#E066FF', '#FF0000', '#7A67EE', '#FF6347', '#FF8C69', '#8B4C39', '#8470FF', '#7B68EE', '#8B3E2F', '#0000FF', '#D15FEE', '#27408B', '#76EE00', '#EEC900', '#CD8162', '#B0C4DE', '#EE9A00', '#4682B4', '#FF8C00', '#FFA500', '#EE2C2C', '#00C5CD', '#B4EEB4', '#00008B', '#CD2626', '#008B45', '#7D26CD', '#6959CD', '#DB7093', '#D02090', '#0000CD', '#BF3EFF', '#48D1CC', '#00FF7F', '#8B6914', '#CD9B9B', '#FF6347', '#B03060', '#8B4789', '#76EEC6', '#DA70D6', '#FFC1C1', '#CDAD00', '#EE4000', '#436EEE', '#43CD80', '#00EE76', '#1874CD', '#00FFFF', '#FFB6C1', '#0000FF', '#00B2EE', '#EE9572', '#FFA07A', '#EEAEEE', '#FFD700', '#00CED1', '#6495ED', '#68228B', '#836FFF', '#FA8072', '#C71585', '#C1FFC1', '#7FFF00', '#9400D3', '#00CD00', '#D2691E', '#EE8262', '#008B00', '#CD0000', '#40E0D0', '#8B2323', '#F08080', '#4EEE94', '#CD661D', '#8B3A3A', '#FF7256', '#912CEE', '#66CDAA', '#8B5742', '#8B6969', '#1E90FF', '#CD8500', '#00BFFF', '#B23AEE', '#00F5FF', '#EE3B3B', '#8B668B', '#8B2500', '#CD7054', '#9B30FF', '#97FFFF', '#CD9B1D', '#00BFFF', '#00EE00', '#7FFFD4', '#EE6A50', '#EEAD0E', '#FFBBFF', '#FFA500', '#EEEE00', '#008B8B', '#79CDCD', '#FF0000', '#87CEFA', '#FF4040', '#1C86EE', '#EE7621', '#B03060', '#63B8FF', '#FFC125', '#EE82EE', '#0000EE', '#8B4513', '#FF3030', '#8B5A00', '#EE9A00', '#DDA0DD', '#FF4500', '#9AFF9A', '#CD5B45', '#FF69B4', '#00E5EE', '#0000CD', '#EE5C42', '#9A32CD', '#5CACEE', '#A020F0', '#A52A2A', '#9932CC', '#B22222']
         return colors[index]
 
+class Event:
+    def __init__(self, type: str, blockGroups: list[list[chessboard.ChessBlock]]):
+        self.eventType = type
+        self.relativeBlockGroups = blockGroups
+
+        self.isValidEvent = False
+        if len(self.relativeBlockGroups) > 0 or self.eventType != "":
+            self.isValidEvent = True
 
 class DataAlgorithm:
     def __init__(self):
