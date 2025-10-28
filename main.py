@@ -153,15 +153,17 @@ def main(page: ft.Page):
         if e.key in ["W", "w", "ArrowUp", "Arrow Up"]:
             chessboard.printBoard()
             if chessboard.sendBlock():
+                update_allView()
                 time.sleep(0.4)
                 temp_count = 0
                 while(temp_count < 3):
-                    if temp_count > 3:
-                        break
+                    # if temp_count > 3:
+                    #     break
                     chessboard.printBoard()
                     
                     checkResult = chessboard.checkChessboard()  # 在checkChessboard里面就已经聚合过后台了
-                    temp_count += 1
+                    update_allView()
+                    # temp_count += 1
                     time.sleep(0.4)
                     if checkResult.isValidEvent:
                         continue

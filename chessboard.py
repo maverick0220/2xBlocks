@@ -23,8 +23,9 @@ class ChessBlock:
         self.color = value.color
 
     def getText(self) -> str:
-        if self.value == -1:
-            return ""
+        # -todo: 记得这个地方应该是不显示-1的，为了调试还是全部显示吧
+        # if self.value == -1:
+        #     return ""
 
         return f"{round(self.value)}{self.rank}"
 
@@ -116,6 +117,7 @@ class Chessboard:
             self.board[b.y][b.x].rank = ""
             self.board[b.y][b.x].color = "#B5B5B5"
             self.board[b.y][b.x].mergeVector = -1
+            self.board[b.y][b.x].isCenter = False
         # self.updateView()
 
     def _erasureMergedBlocks(self, mergeCenter: ChessBlock, blocks: list[ChessBlock]):
@@ -154,9 +156,6 @@ class Chessboard:
             nearbyCompateableBlock.append(self.board[center.y + 1][center.x])
 
         return nearbyCompateableBlock
-
-    def _getNewCenterBlocks(self) -> list[ChessBlock]:
-        return [x for y in self.board for x in y if x.isCenter]
     
     def checkChessboard(self) -> data.Event:
         # merge & fall，这必须是一个自递归的方法，因为每一步的操作都得反馈给UI那边做渲染，不然就是丢一个方块看不到过程只能看到结果
@@ -165,31 +164,44 @@ class Chessboard:
         
         # 只有新聚合出现的block才被标记为newCenter。
         # 检查有没有newCenter，有就聚合并把新聚合出来的标记成newCenter并擦除被聚合的
-        checkResultEvent = data.Event("", [])
+        # checkResultEvent = data.Event("", [])
 
         # 1.先找找有没有fall的
-        didFall = False
+        columnDidFall = [0 for _ in range(self.size_x)]
         for x in range(self.size_x):
             # 先看看有没有空，确定到底有没有fall
             columnInfo = [1 if self.board[y][x].value > 0 else 0 for y in range(self.size_y)]
+            # print(f"== checkChessboard fall column len1: {len(columnInfo)}")
             while columnInfo and columnInfo[-1] == 0:
                 columnInfo.pop()
+            # print(f"== checkChessboard fall column len2: {len(columnInfo)}, {sum(columnInfo)}\n")
             if len(columnInfo) > sum(columnInfo):
-                didFall
+                # 执行fall
+                columnDidFall[x] = 1
 
-            # 再去执行fall
-            columnData = [self.board[y][x] for y in range(self.size_y) if self.board[y][x].value != -1]
-            for y in range(0, len(columnData)):
-                self.board[y][x].update(columnData[y])
-                self.board[y][x].isCenter = True
-
-            self._erasureBlocks([self.board[y][x] for y in range(len(columnData), self.size_y)])
-        
-        if didFall:
+                columnData = [self.board[y][x] for y in range(self.size_y) if self.board[y][x].value != -1]
+                for y in range(0, len(columnData)):
+                    self.board[y][x].update(columnData[y])
+                    if columnData[y].y != y:  # 有位移的才更新isCenter
+                        self.board[y][x].isCenter = True
+                self._erasureBlocks([self.board[y][x] for y in range(len(columnData), self.size_y)])
+            else:
+                # 没有需要fall的，pass，看下一列吧
+                continue
+            
+        if sum(columnDidFall) > 0:
+            print("== checkChessboard: did fall")
             return data.Event("fall", [])
 
         # 2.再找找有没有聚合的
-        newCenterBlocks = self._getNewCenterBlocks()
+        newCenterBlocks = []
+        self.printBoard()
+        for y in range(self.size_y):
+            for x in range(self.size_x):
+                # print(f"== newCenterBlocks: {y},{x} {self.board[y][x].isCenter}")
+                if self.board[y][x].isCenter:
+                    newCenterBlocks.append(self.board[y][x])
+        # print(f"== newCenterBlocks: {newCenterBlocks}")
         if newCenterBlocks == None:
             return data.Event("", [])
         
@@ -197,12 +209,13 @@ class Chessboard:
         toMergeBlocks = []  # - todo: 这个是需要传回给前端的东西，告诉前端哪些block需要有聚合的动画
         for ncBlock in newCenterBlocks:
             nearbyCompateables = self._getNearbyCompateableBlocks(ncBlock)
+            print(f"checkChessboard: ({ncBlock.y}, {ncBlock.x}) nearbyCompateables: {len(nearbyCompateables)}")
             if len(nearbyCompateables) > 0:
                 didNewCenterBlockMerged.append(1)
                 mergedBlock = self.mergeBlocks(ncBlock, nearbyCompateables)
                 self.board[ncBlock.y][ncBlock.x].update(mergedBlock)
                 self.board[ncBlock.y][ncBlock.x].isCenter = True
-                self._erasureBlocks(nearbyCompateables)
+                self._erasureMergedBlocks(ncBlock, nearbyCompateables)
                 ncBlock.isCenter = True
 
                 toMergeBlocks.append([[ncBlock] + nearbyCompateables])
@@ -211,50 +224,9 @@ class Chessboard:
                 ncBlock.isCenter = False
             
         if sum(didNewCenterBlockMerged) == 0:
-            didFinishCheck = True
+            return data.Event("", [])
+        print("== checkChessboard: did merge")
         return data.Event("merge", toMergeBlocks)
-
-    def checkChessboard_old(self) -> (bool, list[[ChessBlock]]):
-        # merge & fall，这必须是一个自递归的方法，因为每一步的操作都得反馈给UI那边做渲染，不然就是丢一个方块看不到过程只能看到结果
-        # 因为是自递归的，不要想着一次性干完所有事情，而是只干一次，剩下的下次再干。每次干的结果都要反馈给UI那边
-        # 要反馈的东西有两类，发生了聚合、发生了下坠
-        
-        # 只有新聚合出现的block才被标记为newCenter。
-        # 检查有没有newCenter，有就聚合并把新聚合出来的标记成newCenter并擦除被聚合的，
-        newCenterBlocks = self._getNewCenterBlocks()
-        if newCenterBlocks == None:
-            return True, []
-
-        # 1.merge
-        didFinishCheck = False
-        didNewCenterBlockMerged = []
-
-        toMergeBlocks = []  # - todo: 这个是需要传回给前端的东西，告诉前端哪些block需要有聚合的动画
-        for ncBlock in newCenterBlocks:
-            nearbyCompateables = self._getNearbyCompateableBlocks(ncBlock)
-            if len(nearbyCompateables) > 0:
-                didNewCenterBlockMerged.append(1)
-                mergedBlock = self.mergeBlocks(ncBlock, nearbyCompateables)
-                self.board[ncBlock.y][ncBlock.x].update(mergedBlock)
-                self.board[ncBlock.y][ncBlock.x].isCenter = True
-                self._erasureBlocks(nearbyCompateables)
-                ncBlock.isCenter = True
-            else:
-                didNewCenterBlockMerged.append(0)
-                ncBlock.isCenter = False
-            
-        if sum(didNewCenterBlockMerged) == 0:
-            didFinishCheck = True
-
-        # 2.fall
-        for x in range(self.size_x):
-            columnInfo = [data.Data(self.board[y][x].value, self.board[y][x].rank) for y in range(self.size_y) if self.board[y][x].value != -1]
-            for y in range(0, len(columnInfo)):
-                self.board[y][x].update(columnInfo[y])
-
-            self._erasureBlocks([self.board[y][x] for y in range(len(columnInfo), self.size_y)])
-
-        return didFinishCheck, toMergeBlocks
 
     def mergeBlocks(self, center: ChessBlock, blocks: list[ChessBlock]) -> ChessBlock:
         mergedValue = (2 ** (len(blocks))) * center.value

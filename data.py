@@ -33,7 +33,7 @@ class Data:
 
         if self.value == -1:
             return "#B5B5B5"
-        print(f"getColor(): {self.value}")
+        # print(f"getColor(): {self.value}")
         # 3. 结合哈希结果生成索引（保证连续8个不同，覆盖200个索引）
         num_h = num_hash(self.value) % 200  # 数字哈希映射到0-199
         rank_h = rank_hash(self.rank)
