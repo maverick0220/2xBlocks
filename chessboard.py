@@ -27,7 +27,7 @@ class ChessBlock:
         # if self.value == -1:
         #     return ""
 
-        return f"{round(self.value)}{self.rank}"
+        return f"{int(self.value)}{self.rank}"
 
     def isSameWithBlock(self, block) -> bool:
         if block.value == self.value and block.rank == self.rank:
@@ -37,7 +37,7 @@ class ChessBlock:
 class Chessboard:
     def __init__(self):
 
-        self.dataAlgorithm = data.DataAlgorithm()
+        self.dataProcess = data.DataProcess()
 
         # load save
         gameSave = [line.strip().split(",") for line in open("./gameSave.csv", "r")]
@@ -45,13 +45,14 @@ class Chessboard:
         self.size_y = len(gameSave)  # 7行，每行5列
         self.size_x = len(gameSave[0])
 
-        self.currentBlockRange = self.dataAlgorithm.getDataRange(gameSave)
-
         # 注意：board最后有一行是隐形的，如果到顶了，相同的色块照样往下合并，不同的就直接gg
-        self.board = [[ChessBlock(y, x, self.dataAlgorithm.translateStrToData(gameSave[y][x])) for x in range(self.size_x)] for y in range(self.size_y)]
+        self.board = [[ChessBlock(y, x, self.dataProcess.translateStrToData(gameSave[y][x])) for x in range(self.size_x)] for y in range(self.size_y)]
         self.board.append([ChessBlock(self.size_y, x, data.Data(-1, "")) for x in range(self.size_x)])
 
+        self.currentMaxData = 1
+
         # - todo: 这里应该是持续地生成nextBlockQueue的内容，现在只是放进去了测试的内容
+        self.currentBlockRange = self.dataProcess.getDataRange()
         self.nextBlockQueue = [ChessBlock(0, 2, data.Data(1, "a")) for i in range(2)]  # self.createNextBlock
         self.slot = [ChessBlock(0, i, data.Data(-1, "")) for i in range(5)]
         self.slot[2] = self.nextBlockQueue[0]
@@ -78,7 +79,7 @@ class Chessboard:
         print("==============")
 
     def sendBlock(self) -> bool:
-        self.canGamerOperate = False
+        # self.canGamerOperate = False
 
         didSend = False
         for y in range(self.size_y):
@@ -91,15 +92,14 @@ class Chessboard:
         self.slot[self.nextBlockSlotIndex] = ChessBlock(0, self.nextBlockSlotIndex, data.Data(-1, ""))
 
         self._createNextBlock()
-        self.slot[2] = self.nextBlockQueue[0]
-        self.nextBlockSlotIndex = 2
+        self.slot[self.nextBlockSlotIndex] = self.nextBlockQueue[0]
 
-        self.canGamerOperate = True
+        # self.canGamerOperate = True
 
         return didSend
 
     def moveSlot(self, key: str):
-        self.canGamerOperate = False
+        # self.canGamerOperate = False
         if key == "a" or key == "arrow left":
             self.slot = self.slot[1:] + [self.slot[0]]
             if self.nextBlockSlotIndex == 0:
@@ -109,7 +109,7 @@ class Chessboard:
         elif key == "d" or key == "arrow right":
             self.slot = [self.slot[-1]] + self.slot[:-1]
             self.nextBlockSlotIndex = (self.nextBlockSlotIndex + 1) % self.size_x
-        self.canGamerOperate = True
+        # self.canGamerOperate = True
 
     def _erasureBlocks(self, blocks: list[ChessBlock]):
         for b in blocks:
@@ -233,10 +233,13 @@ class Chessboard:
         print(f"mergeBlocks value: {center.value}, {len(blocks)}, {mergedValue}")
         mergedData = data.Data(mergedValue, center.rank)
         if mergedValue > 10000:
-            mergedData.value = mergedData.value / 1000
+            mergedData.value = mergedData.value / 10000
             mergedData.upgradeRank()
 
         mergedBlock = ChessBlock(center.y, center.x, mergedData)
         mergedBlock.isCenter = True
 
         return mergedBlock
+
+    def saveGameToFile(self):
+        pass

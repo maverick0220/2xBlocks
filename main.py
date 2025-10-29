@@ -148,22 +148,26 @@ def main(page: ft.Page):
             return
 
         if e.key in ["A", "a", "D", "d", "ArrowRight", "Arrow Right", "ArrowLeft", "Arrow Left"]:
+            chessboard.canGamerOperate = False
+
             chessboard.moveSlot(e.key.lower())
             update_slotView()
+            chessboard.canGamerOperate = True
         if e.key in ["W", "w", "ArrowUp", "Arrow Up"]:
+
+            print(f"== on_keyboard send: {chessboard.canGamerOperate}")
+            chessboard.canGamerOperate = False
             chessboard.printBoard()
             if chessboard.sendBlock():
                 update_allView()
                 time.sleep(0.4)
-                temp_count = 0
-                while(temp_count < 3):
-                    # if temp_count > 3:
-                    #     break
+
+                while(True):
                     chessboard.printBoard()
                     
                     checkResult = chessboard.checkChessboard()  # 在checkChessboard里面就已经聚合过后台了
                     update_allView()
-                    # temp_count += 1
+
                     time.sleep(0.4)
                     if checkResult.isValidEvent:
                         continue
@@ -175,6 +179,7 @@ def main(page: ft.Page):
 
                 # chessboard.printBoard()
             update_allView()
+            chessboard.canGamerOperate = True
 
     # 绑定键盘事件
     page.on_keyboard_event = on_keyboard
