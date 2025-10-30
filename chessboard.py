@@ -7,30 +7,23 @@ class ChessBlock:
         self.x = x
 
         self.value = initValue.value  # -1表示这是个空的block
-        self.rank = initValue.rank
+        self.index = initValue.index  # 代表在dataIndex里面的索引，因为最多才五百多个，所以这个值的invalid数值定成-1，肯定会超过索引范围
         self.color = initValue.color
 
         self.isCenter = False
 
         # -todo： 还没理清楚，这个东西要clear状态在什么地方clear
-        self.mergeVector = -1  # 1, 2, 3，左上右，标识这个block如果要发生聚合的话是往哪个方向聚合
+        self.mergeVector = -1  # 1, 2, 3, 4，上右下左顺时针，标识这个block如果要发生聚合的话是往哪个方向聚合
 
     def update(self, value: data.Data | ChessBlock):
         if isinstance(value, ChessBlock):
             self.isCenter = value.isCenter
         self.value = value.value
-        self.rank = value.rank
+        self.index = value.index
         self.color = value.color
 
-    def getText(self) -> str:
-        # -todo: 记得这个地方应该是不显示-1的，为了调试还是全部显示吧
-        # if self.value == -1:
-        #     return ""
-
-        return f"{int(self.value)}{self.rank}"
-
     def isSameWithBlock(self, block) -> bool:
-        if block.value == self.value and block.rank == self.rank:
+        if block.value == self.value and block.index == self.index:
             return True
         return False
 
@@ -47,26 +40,30 @@ class Chessboard:
 
         # 注意：board最后有一行是隐形的，如果到顶了，相同的色块照样往下合并，不同的就直接gg
         self.board = [[ChessBlock(y, x, self.dataProcess.translateStrToData(gameSave[y][x])) for x in range(self.size_x)] for y in range(self.size_y)]
-        self.board.append([ChessBlock(self.size_y, x, data.Data(-1, "")) for x in range(self.size_x)])
-
-        self.currentMaxData = 1
+        self.board.append([ChessBlock(self.size_y, x, data.Data("", -1)) for x in range(self.size_x)])
 
         # - todo: 这里应该是持续地生成nextBlockQueue的内容，现在只是放进去了测试的内容
-        self.currentBlockRange = self.dataProcess.getDataRange()
-        self.nextBlockQueue = [ChessBlock(0, 2, data.Data(1, "a")) for i in range(2)]  # self.createNextBlock
-        self.slot = [ChessBlock(0, i, data.Data(-1, "")) for i in range(5)]
+        self.dataRange = self.dataProcess.getDataRange(self.board)
+        self.nextBlockQueue = [] #[ChessBlock(0, 2, data.Data("1024", 11)) for i in range(2)]  # self.createNextBlock
+        self.refreshNextBlockQueue()
+
+        self.slot = [ChessBlock(0, i, data.Data("", -1)) for i in range(5)]
         self.slot[2] = self.nextBlockQueue[0]
         self.nextBlockSlotIndex = 2
 
         self.canGamerOperate = True
 
-    def _createNextBlock(self):
+    def refreshNextBlockQueue(self):
         # 创建新的block塞到self.nextBlockQueue最后，然后把最前面的踢掉
-        pass
+        if len(self.nextBlockQueue) == 2:
+            del self.nextBlockQueue[0]
+
+        for i in range(2 - len(self.nextBlockQueue)):
+            self.nextBlockQueue.append(ChessBlock(0, -1, self.dataProcess.getRandomDataFromRange(self.dataRange)))
 
     def printBoard(self):
         for line in self.board:
-            print([b.getText() for b in line])
+            print([b.value for b in line])
         print(" ")
         for line in self.board:
             row = []
@@ -79,22 +76,18 @@ class Chessboard:
         print("==============")
 
     def sendBlock(self) -> bool:
-        # self.canGamerOperate = False
-
         didSend = False
         for y in range(self.size_y):
-            if self.board[y][self.nextBlockSlotIndex].value == -1:
+            if self.board[y][self.nextBlockSlotIndex].value == "":
                 self.board[y][self.nextBlockSlotIndex].update(self.slot[self.nextBlockSlotIndex])
                 self.board[y][self.nextBlockSlotIndex].isCenter = True
                 didSend = True
                 break
 
-        self.slot[self.nextBlockSlotIndex] = ChessBlock(0, self.nextBlockSlotIndex, data.Data(-1, ""))
+        self.slot[self.nextBlockSlotIndex] = ChessBlock(0, self.nextBlockSlotIndex, data.Data("", -1))
 
-        self._createNextBlock()
+        self.refreshNextBlockQueue()
         self.slot[self.nextBlockSlotIndex] = self.nextBlockQueue[0]
-
-        # self.canGamerOperate = True
 
         return didSend
 
@@ -113,8 +106,8 @@ class Chessboard:
 
     def _erasureBlocks(self, blocks: list[ChessBlock]):
         for b in blocks:
-            self.board[b.y][b.x].value = -1
-            self.board[b.y][b.x].rank = ""
+            self.board[b.y][b.x].value = ""
+            self.board[b.y][b.x].index = -1
             self.board[b.y][b.x].color = "#B5B5B5"
             self.board[b.y][b.x].mergeVector = -1
             self.board[b.y][b.x].isCenter = False
@@ -134,8 +127,8 @@ class Chessboard:
             return -1
 
         for b in blocks:
-            self.board[b.y][b.x].value = -1
-            self.board[b.y][b.x].rank = ""
+            self.board[b.y][b.x].value = ""
+            self.board[b.y][b.x].index = -1
             self.board[b.y][b.x].color = "#B5B5B5"
 
             self.board[b.y][b.x].mergeVector = getRelativeDirection([b.y, b.x], [mergeCenter.y, mergeCenter.x])
@@ -170,7 +163,7 @@ class Chessboard:
         columnDidFall = [0 for _ in range(self.size_x)]
         for x in range(self.size_x):
             # 先看看有没有空，确定到底有没有fall
-            columnInfo = [1 if self.board[y][x].value > 0 else 0 for y in range(self.size_y)]
+            columnInfo = [1 if self.board[y][x].value != "" else 0 for y in range(self.size_y)]
             # print(f"== checkChessboard fall column len1: {len(columnInfo)}")
             while columnInfo and columnInfo[-1] == 0:
                 columnInfo.pop()
@@ -179,7 +172,7 @@ class Chessboard:
                 # 执行fall
                 columnDidFall[x] = 1
 
-                columnData = [self.board[y][x] for y in range(self.size_y) if self.board[y][x].value != -1]
+                columnData = [self.board[y][x] for y in range(self.size_y) if self.board[y][x].value != ""]
                 for y in range(0, len(columnData)):
                     self.board[y][x].update(columnData[y])
                     if columnData[y].y != y:  # 有位移的才更新isCenter
@@ -209,7 +202,7 @@ class Chessboard:
         toMergeBlocks = []  # - todo: 这个是需要传回给前端的东西，告诉前端哪些block需要有聚合的动画
         for ncBlock in newCenterBlocks:
             nearbyCompateables = self._getNearbyCompateableBlocks(ncBlock)
-            print(f"checkChessboard: ({ncBlock.y}, {ncBlock.x}) nearbyCompateables: {len(nearbyCompateables)}")
+            # print(f"checkChessboard: ({ncBlock.y}, {ncBlock.x}) nearbyCompateables: {len(nearbyCompateables)}")
             if len(nearbyCompateables) > 0:
                 didNewCenterBlockMerged.append(1)
                 mergedBlock = self.mergeBlocks(ncBlock, nearbyCompateables)
@@ -218,23 +211,24 @@ class Chessboard:
                 self._erasureMergedBlocks(ncBlock, nearbyCompateables)
                 ncBlock.isCenter = True
 
-                toMergeBlocks.append([[ncBlock] + nearbyCompateables])
+                toMergeBlocks.append([ncBlock] + nearbyCompateables)
             else:
                 didNewCenterBlockMerged.append(0)
                 ncBlock.isCenter = False
             
         if sum(didNewCenterBlockMerged) == 0:
             return data.Event("", [])
-        print("== checkChessboard: did merge")
+        # print("== checkChessboard: did merge")
         return data.Event("merge", toMergeBlocks)
 
     def mergeBlocks(self, center: ChessBlock, blocks: list[ChessBlock]) -> ChessBlock:
-        mergedValue = (2 ** (len(blocks))) * center.value
+        upgradeIndex = center.index + 1 * len(blocks)
+        mergedValue = self.dataProcess.dataIndex[upgradeIndex]  #(2 ** (len(blocks))) * center.value
         print(f"mergeBlocks value: {center.value}, {len(blocks)}, {mergedValue}")
-        mergedData = data.Data(mergedValue, center.rank)
-        if mergedValue > 10000:
-            mergedData.value = mergedData.value / 10000
-            mergedData.upgradeRank()
+        mergedData = data.Data(mergedValue, upgradeIndex)
+        # if mergedValue > 10000:
+        #     mergedData.value = mergedData.value / 10000
+        #     mergedData.upgradeRank()
 
         mergedBlock = ChessBlock(center.y, center.x, mergedData)
         mergedBlock.isCenter = True

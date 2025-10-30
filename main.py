@@ -21,14 +21,14 @@ def main(page: ft.Page):
         for y in range(chessboard.size_y):
             for x in range(chessboard.size_x):
                 chessboard_controls[y][x].bgcolor = chessboard.board[y][x].color
-                chessboard_controls[y][x].content.value = chessboard.board[y][x].getText()
+                chessboard_controls[y][x].content.value = chessboard.board[y][x].value
         page.update()
 
     def update_slotView():
         """当chessboard.slot数据变化时，同步更新控件显示"""
         for i in range(len(slot_controls)):
             slot_controls[i].bgcolor = chessboard.slot[i].color
-            slot_controls[i].content.value = chessboard.slot[i].getText()
+            slot_controls[i].content.value = chessboard.slot[i].value
         page.update()
 
 
@@ -160,7 +160,7 @@ def main(page: ft.Page):
             chessboard.printBoard()
             if chessboard.sendBlock():
                 update_allView()
-                time.sleep(0.4)
+                time.sleep(0.2)
 
                 while(True):
                     chessboard.printBoard()
@@ -168,7 +168,7 @@ def main(page: ft.Page):
                     checkResult = chessboard.checkChessboard()  # 在checkChessboard里面就已经聚合过后台了
                     update_allView()
 
-                    time.sleep(0.4)
+                    time.sleep(0.15)
                     if checkResult.isValidEvent:
                         continue
                     elif len(checkResult.relativeBlockGroups) == 0:
@@ -193,7 +193,7 @@ def main(page: ft.Page):
 
         for block in chessboard.board[y]:
             rect = ft.Container(width=60, height=60, bgcolor=block.color, border_radius=10, alignment=ft.alignment.center,
-                                content=ft.Text(value=block.getText(), color="black", weight=ft.FontWeight.BOLD))
+                                content=ft.Text(value=block.value, color="black", weight=ft.FontWeight.BOLD))
             control_row.append(rect)
             row.controls.append(rect)  # 添加到当前行
         chessboardView.controls.append(row)  # 将行添加到网格
@@ -201,12 +201,13 @@ def main(page: ft.Page):
     page.add(chessboardView)
 
     # 2.slotView
+    # -todo: 还没把nextBlock的UI画出来
     slotRow = ft.Row(spacing=spacing, controls=[])
     slot_controls = []
 
     for block in chessboard.slot:
         rect = ft.Container(width=60, height=60, bgcolor=block.color, border_radius=10, alignment=ft.alignment.center,
-                            content=ft.Text(value=block.getText(), color="black", weight=ft.FontWeight.BOLD))
+                            content=ft.Text(value=block.value, color="black", weight=ft.FontWeight.BOLD))
         slot_controls.append(rect)
         slotRow.controls.append(rect)
     page.add(slotRow)
